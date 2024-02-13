@@ -210,8 +210,9 @@ elif selected2 == "Whatsapp-Bot":
     exp.write("5. Presiona CTRL + ENTER, para previsualizar el mensaje.")
     exp.write("6. Si todo está correcto, presiona el botón 'Enviar mensaje' e iniciar el programa.")
     exp.write("7. El programa utiliza el modulo OS para poder realizar la automatización por lo tanto no cierres la ventana de WhatsApp Web y no manipules la computadora hasta que se termine de enviar todo los mensajes.")
-    file = st.file_uploader("Sube tu archivo", type=["csv","txt","xlsx","xlmx", "json"])
-    
+    file, file2 = st.columns(2)
+    file = file.file_uploader("Sube tu primer archivo", type=["csv","txt","xlsx","xlmx", "json"])
+    file2 = file2.file_uploader("Sube tu segundo archivo", type=["csv","txt","xlsx","xlmx", "json"])
 
     if file is not None:
         file_1 = leer_archivo(file)
