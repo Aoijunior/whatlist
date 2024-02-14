@@ -14,6 +14,30 @@ import pyautogui as pg
 import requests
 import json
 
+# Función para formatear el mensaje con los valores del DataFrame
+def formatear_mensaje(mensaje, df):
+    if df is not None:    
+        # Expresión regular para encontrar las variables dentro del mensaje
+        patron = r'{([^{}]*)}'
+        coincidencias = re.findall(patron, mensaje)
+
+        mensajes_formateados = []  # Lista para almacenar los mensajes formateados y los números de celular
+
+        # Iterar sobre cada fila del DataFrame
+        for index, fila in df.iterrows():
+            mensaje_formateado = mensaje  # Iniciar con el mensaje original
+            # Reemplazar cada variable en el mensaje con el valor correspondiente de la fila
+            for variable in coincidencias:
+                # Obtener el valor de la variable de la fila actual
+                valor_variable = fila.get(variable.strip(), '')
+                # Reemplazar la variable con su valor en el mensaje formateado
+                mensaje_formateado = mensaje_formateado.replace("{" + variable + "}", str(valor_variable))
+            # Agregar el mensaje formateado y el número de celular a la lista de mensajes formateados
+            mensajes_formateados.append((mensaje_formateado, fila['Numero']))
+    else:
+        mensajes_formateados = [("No se ha cargado ningún archivo.", "")] # Si no se ha cargado un archivo, agregar un mensaje de error
+
+    return mensajes_formateados
 
 # Función para aplicar filtro básico
 def filtro_basico(df, columna, valores):
@@ -274,51 +298,45 @@ elif selected2 == "Whatsapp-Bot":
     st.table(df)
 
                 
+    # Componente de entrada de texto para el mensaje
     mensaje = st.text_area("Ingresa tu mensaje, recuerda que los saltos de linea se hacen con '%0A' ")
+
+    # Si se ha ingresado un mensaje
     if mensaje is not None:
-            # Iterar sobre cada fila del dataframe filtrado
-        for index, row in df.iterrows():
-                # Obtener el nombre y apellido de cada fila
-                ejecutivo = row["EJECUTIVO"]
-                supervisor = row["SUPERVISORES"]
-                
-                # Formatear el mensaje con los valores del dataframe
-                mensaje_formateado = (mensaje.format(nombre=ejecutivo, supervisor=supervisor))
-                
-                # Mostrar el mensaje formateado
-                st.write(mensaje_formateado)
+        # Formatear el mensaje con los valores del DataFrame
+        mensaje_formateado = formatear_mensaje(mensaje, df)
+        
+        # Mostrar el mensaje formateado
+        st.write(mensaje_formateado)
 
         # Crear un botón
+# Crear un botón
     clicked = st.button("Enviar mensaje")
 
-        # Verificar si el botón ha sido clickeado
+    # Verificar si el botón ha sido clickeado
     if clicked:
-            # Aquí va tu script
-            for i in range(len(df)):
-                # Verificar si el dataframe filtrado no está vacío
-                if not df.empty:
-                    celular = str(df.iloc[i]['NUMERO'])  # Convertir a string para que se añada al mensaje
-                    nombre = df.iloc[i]['EJECUTIVO']
-                    producto = str(df.iloc[i]['DNI'])  # Convertir a string para que se añada al mensaje
-                    supervisor = df.iloc[i]['SUPERVISORES']
-                    
-                    # Crear mensaje personalizado
-                    mensaje_personalizado = requests.utils.quote(mensaje.format(nombre=nombre, supervisor=supervisor, producto=producto))
-                    
-                    # Aquí irían las acciones para enviar el mensaje por WhatsApp
-                    # (puedes agregar el código que usas para abrir WhatsApp Web, escribir y enviar el mensaje)
-                    # Por simplicidad, he omitido estas acciones en este ejemplo
-                    chrome_path = r"C:\Program Files\BraveSoftware\Brave-Browser\Application\brave.exe %s"
-                    web.open("https://web.whatsapp.com/send?phone=" + celular + "&text=" + mensaje_personalizado)
-                    
-                    ts.sleep(9)           # Esperar 8 segundos a que cargue
-                    pg.click(1230,964)      # Hacer click en la caja de texto
-                    ts.sleep(2)           # Esperar 2 segundos 
-                    pg.press('enter')       # Enviar mensaje 
-                    ts.sleep(3)           # Esperar 3 segundos a que se envíe el mensaje
-                    pg.hotkey('ctrl', 'w')  # Cerrar la pestaña
-                    ts.sleep(2)
-                else:
-                    st.write("El DataFrame filtrado está vacío. No se pueden enviar mensajes.")
+        # Aquí va tu script
+        for mensaje, celular in mensaje_formateado:
+            # Verificar si el mensaje o el número de celular no están vacíos
+            if mensaje and celular:
+                # Crear mensaje personalizado
+                mensaje_personalizado = requests.utils.quote(mensaje.encode('utf-8'))
+
+                # Aquí irían las acciones para enviar el mensaje por WhatsApp
+                # (puedes agregar el código que usas para abrir WhatsApp Web, escribir y enviar el mensaje)
+                # Por simplicidad, he omitido estas acciones en este ejemplo
+                chrome_path = r"C:\Program Files\BraveSoftware\Brave-Browser\Application\brave.exe %s"
+                web.open("https://web.whatsapp.com/send?phone=" + str(celular) + "&text=" + mensaje_personalizado)
+                
+                ts.sleep(11)           # Esperar 8 segundos a que cargue
+                pg.click(1230,964)      # Hacer click en la caja de texto
+                ts.sleep(3)           # Esperar 2 segundos 
+                pg.press('enter')       # Enviar mensaje 
+                ts.sleep(4)           # Esperar 3 segundos a que se envíe el mensaje
+                pg.hotkey('ctrl', 'w')  # Cerrar la pestaña
+                ts.sleep(2)
+            else:
+                st.write("El mensaje o el número de celular están vacíos. No se pueden enviar mensajes.")
+
 else:
     pass
