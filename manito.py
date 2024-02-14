@@ -14,6 +14,30 @@ import pyautogui as pg
 import requests
 import json
 
+
+# Función para aplicar filtro básico
+def filtro_basico(df, columna, valores):
+    if valores:
+        return df[df[columna].isin(valores)]
+    else:
+        return df
+
+# Función para aplicar filtro avanzado
+def filtro_avanzado(df, columna, logica, valor):
+    if logica == 'Mayor':
+        return df[df[columna] > valor]
+    elif logica == 'Mayor o igual':
+        return df[df[columna] >= valor]
+    elif logica == 'Menor':
+        return df[df[columna] < valor]
+    elif logica == 'Menor o igual':
+        return df[df[columna] <= valor]
+    elif logica == 'Igual':
+        return df[df[columna] == valor]
+    elif logica == 'Diferente':
+        return df[df[columna] != valor]
+
+# Detectar el separador de un archivo CSV
 def detectar_separador_csv(file):
     # Leer las primeras líneas del archivo para detectar el separador
     lineas = file.getvalue().decode().split('\n')
@@ -26,7 +50,7 @@ def detectar_separador_csv(file):
     return ','
 
 
-
+# Función para leer archivos
 def leer_archivo(file):
     if file is not None:
         # Leer archivos CSV y TXT
@@ -55,7 +79,7 @@ selected2 = option_menu(None, ["Inicio", "Registro", "Iniciar Sesión", "Gmail-B
     icons=['house','person-fill-add', 'person', "google", "whatsapp",'gear'], 
     menu_icon="cast", default_index=0, orientation="horizontal")
 
-#Condicionales para la selección de las opciones de navegación
+# Condicionales para la selección de las opciones de navegación
 if selected2 == "Inicio":
 
     # Estilo CSS para personalizar la apariencia
@@ -214,31 +238,46 @@ elif selected2 == "Whatsapp-Bot":
     file = file.file_uploader("Sube tu primer archivo", type=["csv","txt","xlsx","xlmx", "json"])
     file2 = file2.file_uploader("Sube tu segundo archivo", type=["csv","txt","xlsx","xlmx", "json"])
 
-    if file is not None:
-        file_1 = leer_archivo(file)
-        file_c1 = file_1.columns[0]
-        file_c2 = file_1.columns[1]
-        file_c3 = file_1.columns[2]
-        file_c4 = file_1.columns[3]
-        file_c5 = file_1.columns[4]
-        # Filtrar el dataframe file_1 basado en los valores seleccionados
-        columna, valor, genero = st.columns(3)
-        columna_seleccionada = columna.selectbox("Selecciona la columna", file_1.columns.unique())
-        columna_genero = genero.selectbox("Selecciona la columna", file_1[file_c4].unique(), None)
-        valores_seleccionados = valor.multiselect("Selecciona los valores", file_1[columna_seleccionada].unique(), None)
-        if valores_seleccionados:
-            file_filtrado = file_1[file_1[columna_seleccionada].isin(valores_seleccionados)]
-        elif columna_genero:
-            file_filtrado = file_1[file_1["GENERO"] == columna_genero]
-        else:
-            file_filtrado = file_1
+    # Lista de filtros
+    df = leer_archivo(file)  # Cambia el método de lectura según el tipo de archivo
+    df_2 = leer_archivo(file2)  # Cambia el método de lectura según el tipo de archivo
+    if "filtros" not in st.session_state:
+            st.session_state.filtros = []
+
+    # Seleccionar tipo de filtro
+    filtro = st.selectbox("Tipo de filtro", ["Básico", "Avanzado"], key="tipo_filtro")
+
+    # Botón para agregar filtro
+    if st.button("Agregar filtro"):
+            st.session_state.filtros.append(filtro)
+
+    # Mostrar filtros
+    for i, filtro in enumerate(st.session_state.filtros):
+            st.markdown(f"> Filtro {i+1}")
+            if filtro == "Básico":
+                columna, valores = st.columns(2)
+                columna = columna.selectbox("Selecciona la columna", df.columns, key=f"columna_basico_{i}")
+                valores = valores.multiselect("Selecciona los valores", df[columna].unique(), key=f"valores_basico_{i}")
+                df = filtro_basico(df, columna, valores)
+            elif filtro == "Avanzado":
+                col1, col2, col3 = st.columns(3)
+                columna = col1.selectbox("Selecciona la columna", df.columns, key=f"columna_avanzado_{i}")
+                logica = col2.selectbox("Selecciona la lógica", ['None','Mayor', 'Mayor o igual', 'Menor', 'Menor o igual', 'Igual', 'Diferente'], key=f"logica_avanzado_{i}")
+                valor = col3.number_input("Ingresa el valor", step=1, key=f"valor_avanzado_{i}")
+                df = filtro_avanzado(df, columna, logica, valor)
             
-        st.table(file_filtrado)
+            # Botón para eliminar filtro
+            if st.button(f"Eliminar filtro {i+1}"):
+                del st.session_state.filtros[i]
+
+    # Aplicar filtros al presionar un botón
+    st.table(df)
+
                 
-        mensaje = st.text_area("Ingresa tu mensaje, recuerda que los saltos de linea se hacen con '%0A' ")
-        if mensaje is not None:
+    mensaje = st.text_area("Ingresa tu mensaje, recuerda que los saltos de linea se hacen con '%0A' ")
+    if mensaje is not None:
             # Iterar sobre cada fila del dataframe filtrado
-            for index, row in file_filtrado.iterrows():
+        for index, row in df.iterrows():
                 # Obtener el nombre y apellido de cada fila
                 ejecutivo = row["EJECUTIVO"]
                 supervisor = row["SUPERVISORES"]
@@ -250,18 +289,18 @@ elif selected2 == "Whatsapp-Bot":
                 st.write(mensaje_formateado)
 
         # Crear un botón
-        clicked = st.button("Enviar mensaje")
+    clicked = st.button("Enviar mensaje")
 
         # Verificar si el botón ha sido clickeado
-        if clicked:
+    if clicked:
             # Aquí va tu script
-            for i in range(len(file_filtrado)):
+            for i in range(len(df)):
                 # Verificar si el dataframe filtrado no está vacío
-                if not file_filtrado.empty:
-                    celular = str(file_filtrado.iloc[i]['NUMERO'])  # Convertir a string para que se añada al mensaje
-                    nombre = file_filtrado.iloc[i]['EJECUTIVO']
-                    producto = str(file_filtrado.iloc[i]['DNI'])  # Convertir a string para que se añada al mensaje
-                    supervisor = file_filtrado.iloc[i]['SUPERVISORES']
+                if not df.empty:
+                    celular = str(df.iloc[i]['NUMERO'])  # Convertir a string para que se añada al mensaje
+                    nombre = df.iloc[i]['EJECUTIVO']
+                    producto = str(df.iloc[i]['DNI'])  # Convertir a string para que se añada al mensaje
+                    supervisor = df.iloc[i]['SUPERVISORES']
                     
                     # Crear mensaje personalizado
                     mensaje_personalizado = requests.utils.quote(mensaje.format(nombre=nombre, supervisor=supervisor, producto=producto))

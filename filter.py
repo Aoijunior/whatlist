@@ -43,7 +43,7 @@ def main():
 
         # Mostrar filtros
         for i, filtro in enumerate(st.session_state.filtros):
-            st.markdown(f"###### Filtro {i+1}")
+            st.markdown(f"> Filtro {i+1}")
             if filtro == "Básico":
                 columna, valores = st.columns(2)
                 columna = columna.selectbox("Selecciona la columna", df.columns, key=f"columna_basico_{i}")
@@ -53,7 +53,7 @@ def main():
                 col1, col2, col3 = st.columns(3)
                 columna = col1.selectbox("Selecciona la columna", df.columns, key=f"columna_avanzado_{i}")
                 logica = col2.selectbox("Selecciona la lógica", ['None','Mayor', 'Mayor o igual', 'Menor', 'Menor o igual', 'Igual', 'Diferente'], key=f"logica_avanzado_{i}")
-                valor = col3.number_input("Ingresa el valor", step=0.01, key=f"valor_avanzado_{i}")
+                valor = col3.number_input("Ingresa el valor", step=1, key=f"valor_avanzado_{i}")
                 df = filtro_avanzado(df, columna, logica, valor)
             
             # Botón para eliminar filtro
